@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 /* global document, window */
-import './encoding.js';
+import '@loaders.gl/polyfills';
 import {parse} from '@loaders.gl/core';
 // eslint-disable-next-line import/no-unresolved
 import {DracoLoader} from '@loaders.gl/draco';

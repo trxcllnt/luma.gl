@@ -63,8 +63,8 @@ export default class AnimationLoopRunner extends Component {
     // TODO - ideally ocular-gatsby should extract images from example source?
     const {path} = this.props;
     if (path) {
-      const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/loaders.gl/master';
-      setPathPrefix(`${RAW_GITHUB}/${path}`);
+      const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';
+      setPathPrefix(`${RAW_GITHUB}/${path}/`);
     }
 
     // Start the actual example

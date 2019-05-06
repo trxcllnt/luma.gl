@@ -1,11 +1,13 @@
 import React from 'react';
 import AnimationLoopRunner from '../../src/components/animation-loop-runner';
-import AnimationLoop from '../../examples/core/gltf/app';
+import AnimationLoop from '../../../examples/core/gltf/app';
+
+const PATH = 'examples/core/gltf';
 
 export default class Example extends React.Component {
   render() {
     return (
-      <AnimationLoopRunner AnimationLoop={AnimationLoop} />
+      <AnimationLoopRunner AnimationLoop={AnimationLoop} path={PATH}/>
     );
   }
 }

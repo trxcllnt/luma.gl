@@ -146,97 +146,97 @@ module.exports = {
     //   image: 'images/example-gltf.jpg'
     // },
     {
-      title: 'Lesson01',
+      title: 'Lesson 1',
       componentUrl: resolve(__dirname, './templates/lessons/example-01.jsx'),
       path: 'examples/lessons/01/',
       image: 'images/lesson-1.png'
     },
     {
-      title: 'Lesson02',
+      title: 'Lesson 2',
       componentUrl: resolve(__dirname, './templates/lessons/example-02.jsx'),
       path: 'examples/lessons/02/',
       image: 'images/lesson-2.png'
     },
     {
-      title: 'Lesson03',
+      title: 'Lesson 3',
       componentUrl: resolve(__dirname, './templates/lessons/example-04.jsx'),
       path: 'examples/lessons/03/',
       image: 'images/lesson-3.png'
     },
     {
-      title: 'Lesson04',
+      title: 'Lesson 4',
       componentUrl: resolve(__dirname, './templates/lessons/example-04.jsx'),
       path: 'examples/lessons/04/',
       image: 'images/lesson-4.png'
     },
     {
-      title: 'Lesson05',
+      title: 'Lesson 5',
       componentUrl: resolve(__dirname, './templates/lessons/example-05.jsx'),
       path: 'examples/lessons/05/',
       image: 'images/lesson-5.png'
     },
     {
-      title: 'Lesson06',
+      title: 'Lesson 6',
       componentUrl: resolve(__dirname, './templates/lessons/example-06.jsx'),
       path: 'examples/lessons/06/',
       image: 'images/lesson-6.png'
     },
     {
-      title: 'Lesson07',
+      title: 'Lesson 7',
       componentUrl: resolve(__dirname, './templates/lessons/example-07.jsx'),
       path: 'examples/lessons/07/',
       image: 'images/lesson-7.png'
     },
     {
-      title: 'Lesson08',
+      title: 'Lesson 8',
       componentUrl: resolve(__dirname, './templates/lessons/example-08.jsx'),
       path: 'examples/lessons/08/',
       image: 'images/lesson-8.png'
     },
     {
-      title: 'Lesson09',
+      title: 'Lesson 9',
       componentUrl: resolve(__dirname, './templates/lessons/example-09.jsx'),
       path: 'examples/lessons/09/',
       image: 'images/lesson-9.png'
     },
     {
-      title: 'Lesson10',
+      title: 'Lesson 10',
       componentUrl: resolve(__dirname, './templates/lessons/example-10.jsx'),
       path: 'examples/lessons/10/',
       image: 'images/lesson-10.png'
     },
     {
-      title: 'Lesson11',
+      title: 'Lesson 11',
       componentUrl: resolve(__dirname, './templates/lessons/example-11.jsx'),
       path: 'examples/lessons/11/',
       image: 'images/lesson-11.png'
     },
     {
-      title: 'Lesson12',
+      title: 'Lesson 12',
       componentUrl: resolve(__dirname, './templates/lessons/example-12.jsx'),
       path: 'examples/lessons/12/',
       image: 'images/lesson-12.png'
     },
     {
-      title: 'Lesson13',
+      title: 'Lesson 13',
       componentUrl: resolve(__dirname, './templates/lessons/example-13.jsx'),
       path: 'examples/lessons/13/',
       image: 'images/lesson-13.png'
     },
     {
-      title: 'Lesson14',
+      title: 'Lesson 14',
       componentUrl: resolve(__dirname, './templates/lessons/example-14.jsx'),
       path: 'examples/lessons/14/',
       image: 'images/lesson-14.png'
     },
     {
-      title: 'Lesson15',
+      title: 'Lesson 15',
       componentUrl: resolve(__dirname, './templates/lessons/example-15.jsx'),
       path: 'examples/lessons/15/',
       image: 'images/lesson-15.png'
     },
     {
-      title: 'Lesson16',
+      title: 'Lesson 16',
       componentUrl: resolve(__dirname, './templates/lessons/example-16.jsx'),
       path: 'examples/lessons/16/',
       image: 'images/lesson-16.png'
@@ -248,15 +248,7 @@ module.exports = {
   webpack: {
     resolve: {
       // modules: [resolve(__dirname, './node_modules')],
-      alias: Object.assign({}, ALIASES, dependencyAliases, {
-        //   '@luma.gl/addons': `${__dirname}/node_modules/@luma.gl/addons/src`,
-        //   '@luma.gl/core': `${__dirname}/node_modules/@luma.gl/core/src`,
-        //   '@luma.gl/constants': `${__dirname}/node_modules/@luma.gl/constants/src`,
-        //   '@luma.gl/webgl': `${__dirname}/node_modules/@luma.gl/webgl/src`,
-        //   '@deck.gl/core': `${__dirname}/node_modules/@deck.gl/core/src`,
-        //   '@deck.gl/layers': `${__dirname}/node_modules/@deck.gl/layers/src`,
-        //   '@deck.gl/react': `${__dirname}/node_modules/@deck.gl/react/src`
-      })
+      alias: Object.assign({}, ALIASES, dependencyAliases)
     }
   }
 };
