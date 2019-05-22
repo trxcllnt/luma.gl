@@ -13,7 +13,7 @@ ENV DISPLAY :99
 RUN apt-get update
 
 # required by lint script
-RUN apt-get -y install jq
+RUN apt-get -y install jq mesa-utils xvfb libgl1-mesa-dri libglapi-mesa libosmesa6 libxi-dev
 
 # https://github.com/buildkite/docker-puppeteer/blob/master/Dockerfile
 RUN  apt-get update \
