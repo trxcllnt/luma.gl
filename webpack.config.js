@@ -11,6 +11,5 @@ module.exports = (env = {}) => {
 
     default:
   }
-  console.log(config);
   return config;
 };
