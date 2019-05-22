@@ -2,9 +2,6 @@ version: '2'
 services:
   luma-gl:
     build: .
-    volumes:
-      - .:/luma-gl
-      - /luma-gl/node_modules/
     environment:
       - BUILDKITE
       - BUILDKITE_BUILD_NUMBER
