@@ -1,7 +1,9 @@
 # Docker Image for BuildKite CI
 # -----------------------------
 
-FROM node:8.9.0
+FROM node:10.15.3
+
+RUN yarn global add yarn@1.10.0
 
 WORKDIR /luma-gl
 ENV PATH /luma-gl/node_modules/.bin:$PATH
