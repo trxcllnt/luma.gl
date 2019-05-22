@@ -43,6 +43,7 @@
     "test": "ocular-test",
     "test-fast": "ocular-test fast",
     "test-browser": "ocular-test browser",
+    "test-ci": "ocular-test cover && (cat coverage/lcov.info | coveralls)",
     "perf": "ocular-test perf-browser",
     "bench": "ocular-test bench",
     "bench-browser": "ocular-test bench-browser",
