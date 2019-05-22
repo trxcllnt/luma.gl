@@ -29,7 +29,6 @@ RUN  apt-get update \
   && chmod +x /usr/sbin/wait-for-it.sh
 
 COPY package.json yarn.lock /luma-gl/
-
-RUN yarn global dir
+COPY dev-modules /luma-gl/
 
 RUN yarn bootstrap
