@@ -634,6 +634,30 @@ const TEXTURE_TEST_CASES = [
   // NOTE: elementCount is equal to width * height
   // TODO: determine width and height based on elementCount and padding if needed
   {
+    name: 'RGBA-FLOAT',
+    sourceData: new Float32Array([
+      0, 0, 0, 0,    -1, -2, -3, -4,  2, 3, 4, 5,       10, 20, 30, 40,
+      5, 6, 7, 8,    51, 61, 71, 81,  -15, -16, 70, 81, 50, 100, -2, -5,
+      9, 10, 11, 12, 0, -20, 52, 78,  -3, -4, 2, 3,     8, 51, 61, 71,
+      3, 14, 15, 16, -4, 2, 3, 4,     11, 12, 0, -20,   0, 0,    -1, -2
+    ]),
+    format: GL.RGBA32F,
+    dataFormat: GL.RGBA,
+    type: GL.FLOAT,
+    width: 4,
+    height: 4,
+    vs: `\
+#version 300 es
+in vec4 inTexture;
+out vec4 outTexture;
+
+void main()
+{
+  outTexture = 2. *  inTexture;
+}
+`
+  },
+  {
     name: 'RED-FLOAT',
     sourceData: new Float32Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
     format: GL.R32F,
@@ -941,6 +965,267 @@ varying float injectedVarying;
   const outData = transform.getData({varyingName: 'injectedVarying'});
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
+
+  t.end();
+});
+
+test.only('WebGL#Transform run (source&destination with custom FS)', t => {
+  const {gl2} = fixture;
+
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const name = 'RGBA-FLOAT';
+  const sourceData = new Float32Array([
+    0, 0, 0, 0,    -1, -2, -3, -4,  2, 3, 4, 5,       10, 20, 30, 40,
+    5, 6, 7, 8,    51, 61, 71, 81,  -15, -16, 70, 81, 50, 100, -2, -5,
+    9, 10, 11, 12, 0, -20, 52, 78,  -3, -4, 2, 3,     8, 51, 61, 71,
+    3, 14, 15, 16, -4, 2, 3, 4,     11, 12, 0, -20,   0, 0,    -1, -2
+  ]);
+  const format = GL.RGBA32F;
+  const dataFormat = GL.RGBA;
+  const type = GL.FLOAT;
+  const width = 4;
+  const height = 4;
+  const vs = `\
+#version 300 es
+in vec4 inTexture;
+out vec4 outTexture;
+
+void main()
+{
+outTexture = inTexture;
+}
+`;
+  const fs = `\
+#version 300 es
+in vec4 outTexture;
+out vec4 transform_output;
+void main()
+{
+  transform_output = 2. * outTexture;
+}
+`;
+
+/*
+vs:
+transform.model.program.vs.source
+"#version 300 es
+
+
+#define SHADER_TYPE_VERTEX
+
+#define AMD_GPU
+
+#if (__VERSION__ > 120)
+
+# define FRAG_DEPTH
+# define DERIVATIVES
+# define DRAW_BUFFERS
+# define TEXTURE_LOD
+
+#endif // __VERSION
+// FRAG_DEPTH => gl_FragDepth is available
+#ifdef GL_EXT_frag_depth
+#extension GL_EXT_frag_depth : enable
+# define FRAG_DEPTH
+# define gl_FragDepth gl_FragDepthEXT
+#endif
+// DERIVATIVES => dxdF, dxdY and fwidth are available
+#ifdef GL_OES_standard_derivatives
+#extension GL_OES_standard_derivatives : enable
+# define DERIVATIVES
+#endif
+// DRAW_BUFFERS => gl_FragData[] is available
+#ifdef GL_EXT_draw_buffers
+#extension GL_EXT_draw_buffers : require
+#define DRAW_BUFFERS
+#endif
+// TEXTURE_LOD => texture2DLod etc are available
+#ifdef GL_EXT_shader_texture_lod
+#extension GL_EXT_shader_texture_lod : enable
+# define TEXTURE_LOD
+#define texture2DLod texture2DLodEXT
+#define texture2DProjLod texture2DProjLodEXT
+#define texture2DProjLod texture2DProjLodEXT
+#define textureCubeLod textureCubeLodEXT
+#define texture2DGrad texture2DGradEXT
+#define texture2DProjGrad texture2DProjGradEXT
+#define texture2DProjGrad texture2DProjGradEXT
+#define textureCubeGrad textureCubeGradEXT
+#endif
+
+
+
+
+#define MODULE_TRANSFORM
+in float transform_elementID;
+
+// returns half of pixel size, used to move the pixel position to center of the pixel.
+vec2 transform_getPixelSizeHalf(vec2 size) {
+  return vec2(1.) / (2. * size);
+}
+
+// returns current elements pixel indeces [x, y],
+// where x ranges in [0 to texSize-1] and y ranges in [0 to texSize-1]
+vec2 transform_getPixelIndices(vec2 texSize, vec2 pixelSizeHalf) {
+  // Add safe offset (half of pixel height) before doing floor
+  float yIndex = floor((transform_elementID / texSize[0]) + pixelSizeHalf[1]);
+  float xIndex = transform_elementID - (yIndex * texSize[0]);
+  return vec2(xIndex, yIndex);
+}
+
+// returns current elementID's texture co-ordianate
+vec2 transform_getTexCoord(vec2 size) {
+  vec2 pixelSizeHalf = transform_getPixelSizeHalf(size);
+  vec2 indices = transform_getPixelIndices(size, pixelSizeHalf);
+  vec2 coord = indices / size + pixelSizeHalf;
+  return coord;
+}
+
+// returns current elementID's position
+vec2 transform_getPos(vec2 size) {
+  vec2 texCoord = transform_getTexCoord(size);
+  // Change from [0 1] range to [-1 1]
+  vec2 pos = (texCoord * (2.0, 2.0)) - (1., 1.);
+  return pos;
+}
+
+// returns current elementID's pixel value
+vec4 transform_getInput(sampler2D texSampler, vec2 size) {
+  vec2 texCoord = transform_getTexCoord(size);
+  vec4 textureColor = texture(texSampler, texCoord);
+  return textureColor;
+}
+// END MODULE_transform
+
+// in vec4 inTexture; => Replaced by Transform with a sampler
+out vec4 outTexture;
+
+  uniform sampler2D transform_uSampler_inTexture;
+  uniform vec2 transform_uSize_inTexture;
+uniform vec2 transform_uSize_outTexture;
+
+
+void main()
+{
+  vec4 inTexture = transform_getInput(transform_uSampler_inTexture, transform_uSize_inTexture).xyzw;
+
+     vec2 transform_position = transform_getPos(transform_uSize_outTexture);
+     gl_Position = vec4(transform_position, 0, 1.);
+
+outTexture = 2. *  inTexture;
+}
+"
+
+fs:
+"#version 300 es
+
+
+#define SHADER_TYPE_FRAGMENT
+
+#define AMD_GPU
+
+#if (__VERSION__ > 120)
+
+# define FRAG_DEPTH
+# define DERIVATIVES
+# define DRAW_BUFFERS
+# define TEXTURE_LOD
+
+#endif // __VERSION
+// FRAG_DEPTH => gl_FragDepth is available
+#ifdef GL_EXT_frag_depth
+#extension GL_EXT_frag_depth : enable
+# define FRAG_DEPTH
+# define gl_FragDepth gl_FragDepthEXT
+#endif
+// DERIVATIVES => dxdF, dxdY and fwidth are available
+#ifdef GL_OES_standard_derivatives
+#extension GL_OES_standard_derivatives : enable
+# define DERIVATIVES
+#endif
+// DRAW_BUFFERS => gl_FragData[] is available
+#ifdef GL_EXT_draw_buffers
+#extension GL_EXT_draw_buffers : require
+#define DRAW_BUFFERS
+#endif
+// TEXTURE_LOD => texture2DLod etc are available
+#ifdef GL_EXT_shader_texture_lod
+#extension GL_EXT_shader_texture_lod : enable
+# define TEXTURE_LOD
+#define texture2DLod texture2DLodEXT
+#define texture2DProjLod texture2DProjLodEXT
+#define texture2DProjLod texture2DProjLodEXT
+#define textureCubeLod textureCubeLodEXT
+#define texture2DGrad texture2DGradEXT
+#define texture2DProjGrad texture2DProjGradEXT
+#define texture2DProjGrad texture2DProjGradEXT
+#define textureCubeGrad textureCubeGradEXT
+#endif
+
+
+
+precision highp float;
+
+
+#define MODULE_TRANSFORM
+// END MODULE_transform
+
+in vec4 outTexture;
+out vec4 transform_output;
+void main() {
+  transform_output = outTexture;
+}"
+*/
+
+// const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
+const sourceTexture = new Texture2D(gl2, {
+  data: sourceData,
+  format,
+  dataFormat,
+  type,
+  mipmaps: false,
+  width,
+  height,
+  pixelStore: {
+    [GL.UNPACK_FLIP_Y_WEBGL]: false
+  }
+});
+const transform = new Transform(gl2, {
+  _sourceTextures: {
+    inTexture: sourceTexture
+  },
+  _targetTexture: 'inTexture',
+  _targetTextureVarying: 'outTexture',
+  _swapTexture: 'inTexture',
+  vs,
+  fs,
+  elementCount: sourceData.length
+});
+
+transform.run();
+
+let expectedData = sourceData.map(x => x * 2);
+// By default getData reads data from current Framebuffer.
+let outTexData = transform.getData({packed: true});
+t.deepEqual(
+  outTexData,
+  expectedData,
+  `${name} Transform should write correct data into Texture`
+);
+
+transform.swap();
+transform.run();
+expectedData = sourceData.map(x => x * 4);
+
+// By default getData reads data from current Framebuffer.
+outTexData = transform.getData({packed: true});
+
+t.deepEqual(outTexData, expectedData, `${name} Transform swap Textures`);
 
   t.end();
 });
