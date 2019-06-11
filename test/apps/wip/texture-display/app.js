@@ -124,7 +124,79 @@ function getTextureToDisplay(gl) {
   // return hpResults.flatPyramidTexture;
 
   // return texture;
-  return runKDE(gl, {texture});
+  const kdeTexture = runKDE(gl, {texture});
+  let domain = calculateDomain(gl, {texture: kdeTexture});
+  console.log(`KDE domain: ${domain}`);
+
+  domain = calculateDomain(gl, {texture});
+  console.log(`Orig domain: ${domain}`);
+
+  return kdeTexture;
+}
+
+function calculateDomain(gl, {texture}) {
+  const vs = `\
+#version 300 es
+in vec4 inTexture;
+out vec4 outTexture;
+
+void main()
+{
+outTexture = inTexture;
+gl_Position = vec4(0, 0, 0, 1.);
+}
+`;
+
+// const fs = `\
+// #version 300 es
+// in vec4 outTexture;
+// out vec4 transform_output;
+// void main()
+// {
+// transform_output = outTexture;
+// }
+// `;
+
+const target = new Texture2D(gl, {
+  data: new Float32Array(4).fill(0),
+  format: GL.RGBA32F,
+  type: GL.FLOAT,
+  border: 0,
+  mipmaps: false,
+  parameters: {
+    [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
+    [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
+  },
+  pixelStore: {
+    [GL.UNPACK_FLIP_Y_WEBGL]: false
+  },
+  dataFormat: GL.RGBA,
+  width: 1,
+  height: 1
+});
+
+const {width, height} = texture;
+const transform = new Transform(gl, {
+  _sourceTextures: {
+    inTexture: texture
+  },
+  _targetTexture: target,
+  _targetTextureVarying: 'outTexture',
+  vs,
+//  fs,
+  elementCount: width * height,
+});
+
+transform.run({
+  parameters: {
+    blend: true,
+    depthTest: false,
+    blendFunc: [GL.ONE, GL.ONE],
+    blendEquation: GL.MAX
+  }
+});
+// return transform._getTargetTexture();
+return transform.getData();
 }
 
 function runKDE(gl, {texture}) {
