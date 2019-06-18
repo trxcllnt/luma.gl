@@ -228,7 +228,10 @@ export default class Transform {
       this._setupSwapBuffers();
     }
 
-    const {_sourceTextures, _targetTexture} = opts;
+    const {_sourceTextures, _targetTexture, _swapTexture} = opts;
+    if (_swapTexture) {
+      this._swapTexture = _swapTexture;
+    }
     if (_sourceTextures || _targetTexture) {
       Object.assign(this.sourceTextures[currentIndex], _sourceTextures);
       // if _targetTexture specified use it, other wise rebuild traget texture using
@@ -283,7 +286,7 @@ export default class Transform {
 
   _initialize(props = {}) {
     const {feedbackBuffers, feedbackMap} = this._validateProps(props);
-    const {sourceBuffers, varyings, _targetTexture, _targetTextureVarying, _swapTexture} = props;
+    const {sourceBuffers, varyings, _targetTextureVarying, _swapTexture} = props;
 
     let varyingsArray = varyings;
     if (feedbackMap && !Array.isArray(varyings)) {
@@ -292,10 +295,9 @@ export default class Transform {
     this.varyingsArray = varyingsArray;
     this.feedbackMap = feedbackMap;
     this._swapTexture = _swapTexture;
-    if (_targetTexture) {
+    if (_targetTextureVarying) {
       this.targetTextureVarying = _targetTextureVarying;
       this.renderingToTexture = true;
-      assert(this.targetTextureVarying);
     }
 
     this._setupBuffers({sourceBuffers, feedbackBuffers});
@@ -328,17 +330,17 @@ export default class Transform {
     }
 
     // assert on required parameters
-    const {vs, elementCount, varyings} = props;
+    // const {vs, elementCount, varyings} = props;
     const {_sourceTextures, _targetTexture, _targetTextureVarying, _swapTexture} = props;
 
-    assert(
-      vs &&
-        // destinations are provided
-        (varyings || feedbackMap || _targetTexture) &&
-        // when only writting to textures auto-duduce from texture dimenstions
-        elementCount
-    );
-
+    // assert(
+    //   vs &&
+    //     // destinations are provided
+    //     (varyings || feedbackMap || _targetTexture) &&
+    //     // when only writting to textures auto-duduce from texture dimenstions
+    //     elementCount
+    // );
+    //
     for (const bufferName in feedbackBuffers || {}) {
       assert(
         feedbackBuffers[bufferName] instanceof Buffer ||
@@ -376,10 +378,8 @@ export default class Transform {
     this.sourceTextures[1] = {};
     this.hasSourceTextures = Object.keys(this.sourceTextures[0]).length > 0;
 
-    if (this.targetTextureVarying) {
+    if (_targetTexture) {
       const texture = this._buildTargetTexture(_targetTexture);
-      // Either a texture or refAttribute must be provided
-      assert(texture);
       this.targetTextures[0] = texture;
       this.targetTextures[1] = null;
     }
@@ -550,27 +550,41 @@ export default class Transform {
       return;
     }
 
-    let {width, height} = this.targetTextures[0];
-    this.framebuffers[0] = new Framebuffer(this.gl, {
-      id: `${this.id || 'transform'}-framebuffer-0`,
-      width,
-      height,
-      attachments: {
-        [GL.COLOR_ATTACHMENT0]: this.targetTextures[0]
-      }
-    });
+    let fbProps = {
+      width: 1,
+      height: 1,
+      id: `${this.id || 'transform'}-framebuffer-0`
+    };
 
-    if (this._swapTexture) {
-      ({width, height} = this.targetTextures[1]);
-
-      this.framebuffers[1] = new Framebuffer(this.gl, {
-        id: `${this.id || 'transform'}-framebuffer-1`,
+    if (this.targetTextures[0]) {
+      const {width, height} = this.targetTextures[0];
+      Object.assign(fbProps, {
         width,
         height,
         attachments: {
-          [GL.COLOR_ATTACHMENT0]: this.targetTextures[1]
+          [GL.COLOR_ATTACHMENT0]: this.targetTextures[0]
         }
       });
+    }
+    this.framebuffers[0] = new Framebuffer(this.gl, fbProps);
+
+    if (this._swapTexture) {
+      fbProps = {
+        width: 1,
+        height: 1,
+        id: `${this.id || 'transform'}-framebuffer-1`
+      };
+      if (this.targetTextures[1]) {
+        const {width, height} = this.targetTextures[1];
+        Object.assign(fbProps, {
+          width,
+          height,
+          attachments: {
+            [GL.COLOR_ATTACHMENT0]: this.targetTextures[1]
+          }
+        });
+      }
+      this.framebuffers[1] = new Framebuffer(this.gl, fbProps);
     }
   }
 
@@ -598,12 +612,14 @@ export default class Transform {
     );
     const combinedInject = combineInjects([props.inject || {}, inject]);
     this.targetTextureType = targetTextureType;
-    const fs = props.fs || getPassthroughFS({
-      version: getShaderVersion(vs),
-      input: this.targetTextureVarying,
-      inputType: targetTextureType,
-      output: FS_OUTPUT_VARIABLE
-    });
+    const fs =
+      props.fs ||
+      getPassthroughFS({
+        version: getShaderVersion(vs),
+        input: this.targetTextureVarying,
+        inputType: targetTextureType,
+        output: FS_OUTPUT_VARIABLE
+      });
     const modules =
       this.hasSourceTextures || this.targetTextureVarying
         ? [transform].concat(props.modules || [])
@@ -616,8 +632,8 @@ export default class Transform {
     return updateForTextures({
       vs,
       sourceTextureMap: this.sourceTextures[this.currentIndex],
-      targetTextureVarying: this.targetTextureVarying,
-      targetTexture: this.targetTextures[this.currentIndex]
+      targetTextureVarying: this.targetTextureVarying
+      // targetTexture: this.targetTextures[this.currentIndex]
     });
   }
 }

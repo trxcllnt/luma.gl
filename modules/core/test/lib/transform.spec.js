@@ -636,10 +636,70 @@ const TEXTURE_TEST_CASES = [
   {
     name: 'RGBA-FLOAT',
     sourceData: new Float32Array([
-      0, 0, 0, 0,    -1, -2, -3, -4,  2, 3, 4, 5,       10, 20, 30, 40,
-      5, 6, 7, 8,    51, 61, 71, 81,  -15, -16, 70, 81, 50, 100, -2, -5,
-      9, 10, 11, 12, 0, -20, 52, 78,  -3, -4, 2, 3,     8, 51, 61, 71,
-      3, 14, 15, 16, -4, 2, 3, 4,     11, 12, 0, -20,   0, 0,    -1, -2
+      0,
+      0,
+      0,
+      0,
+      -1,
+      -2,
+      -3,
+      -4,
+      2,
+      3,
+      4,
+      5,
+      10,
+      20,
+      30,
+      40,
+      5,
+      6,
+      7,
+      8,
+      51,
+      61,
+      71,
+      81,
+      -15,
+      -16,
+      70,
+      81,
+      50,
+      100,
+      -2,
+      -5,
+      9,
+      10,
+      11,
+      12,
+      0,
+      -20,
+      52,
+      78,
+      -3,
+      -4,
+      2,
+      3,
+      8,
+      51,
+      61,
+      71,
+      3,
+      14,
+      15,
+      16,
+      -4,
+      2,
+      3,
+      4,
+      11,
+      12,
+      0,
+      -20,
+      0,
+      0,
+      -1,
+      -2
     ]),
     format: GL.RGBA32F,
     dataFormat: GL.RGBA,
@@ -780,14 +840,24 @@ test('WebGL#Transform run (source&destination texture update)', t => {
       }
     });
     const transform = new Transform(gl2, {
+      _targetTextureVarying: 'outTexture',
+      vs,
+      elementCount: sourceData.length,
+      _sourceTextures: {
+        inTexture: new Texture2D(gl2)
+        // when processing shader source we need to know the name of input textures to comment out the attribute definition
+        // or we can also remove requirement of defining => but we are using attribute type
+      }
+      // _targetTexture: 'inTexture',
+      // _swapTexture: 'inTexture'
+    });
+
+    transform.update({
       _sourceTextures: {
         inTexture: sourceTexture
       },
-      _targetTexture: 'inTexture',
-      _targetTextureVarying: 'outTexture',
-      _swapTexture: 'inTexture',
-      vs,
-      elementCount: sourceData.length
+      _targetTexture: 'inTexture'
+      // _swapTexture: 'inTexture'
     });
 
     transform.run();
@@ -969,7 +1039,7 @@ varying float injectedVarying;
   t.end();
 });
 
-test.only('WebGL#Transform run (source&destination with custom FS)', t => {
+test('WebGL#Transform run (source&destination with custom FS)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -980,10 +1050,70 @@ test.only('WebGL#Transform run (source&destination with custom FS)', t => {
 
   const name = 'RGBA-FLOAT';
   const sourceData = new Float32Array([
-    0, 0, 0, 0,    -1, -2, -3, -4,  2, 3, 4, 5,       10, 20, 30, 40,
-    5, 6, 7, 8,    51, 61, 71, 81,  -15, -16, 70, 81, 50, 100, -2, -5,
-    9, 10, 11, 12, 0, -20, 52, 78,  -3, -4, 2, 3,     8, 51, 61, 71,
-    3, 14, 15, 16, -4, 2, 3, 4,     11, 12, 0, -20,   0, 0,    -1, -2
+    0,
+    0,
+    0,
+    0,
+    -1,
+    -2,
+    -3,
+    -4,
+    2,
+    3,
+    4,
+    5,
+    10,
+    20,
+    30,
+    40,
+    5,
+    6,
+    7,
+    8,
+    51,
+    61,
+    71,
+    81,
+    -15,
+    -16,
+    70,
+    81,
+    50,
+    100,
+    -2,
+    -5,
+    9,
+    10,
+    11,
+    12,
+    0,
+    -20,
+    52,
+    78,
+    -3,
+    -4,
+    2,
+    3,
+    8,
+    51,
+    61,
+    71,
+    3,
+    14,
+    15,
+    16,
+    -4,
+    2,
+    3,
+    4,
+    11,
+    12,
+    0,
+    -20,
+    0,
+    0,
+    -1,
+    -2
   ]);
   const format = GL.RGBA32F;
   const dataFormat = GL.RGBA;
@@ -1010,7 +1140,7 @@ void main()
 }
 `;
 
-/*
+  /*
 vs:
 transform.model.program.vs.source
 "#version 300 es
@@ -1182,50 +1312,46 @@ void main() {
 }"
 */
 
-// const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
-const sourceTexture = new Texture2D(gl2, {
-  data: sourceData,
-  format,
-  dataFormat,
-  type,
-  mipmaps: false,
-  width,
-  height,
-  pixelStore: {
-    [GL.UNPACK_FLIP_Y_WEBGL]: false
-  }
-});
-const transform = new Transform(gl2, {
-  _sourceTextures: {
-    inTexture: sourceTexture
-  },
-  _targetTexture: 'inTexture',
-  _targetTextureVarying: 'outTexture',
-  _swapTexture: 'inTexture',
-  vs,
-  fs,
-  elementCount: sourceData.length
-});
+  // const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
+  const sourceTexture = new Texture2D(gl2, {
+    data: sourceData,
+    format,
+    dataFormat,
+    type,
+    mipmaps: false,
+    width,
+    height,
+    pixelStore: {
+      [GL.UNPACK_FLIP_Y_WEBGL]: false
+    }
+  });
+  const transform = new Transform(gl2, {
+    _sourceTextures: {
+      inTexture: sourceTexture
+    },
+    _targetTexture: 'inTexture',
+    _targetTextureVarying: 'outTexture',
+    _swapTexture: 'inTexture',
+    vs,
+    fs,
+    elementCount: sourceData.length
+  });
 
-transform.run();
+  transform.run();
 
-let expectedData = sourceData.map(x => x * 2);
-// By default getData reads data from current Framebuffer.
-let outTexData = transform.getData({packed: true});
-t.deepEqual(
-  outTexData,
-  expectedData,
-  `${name} Transform should write correct data into Texture`
-);
+  let expectedData = sourceData.map(x => x * 2);
+  // By default getData reads data from current Framebuffer.
+  let outTexData = transform.getData({packed: true});
+  t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
 
-transform.swap();
-transform.run();
-expectedData = sourceData.map(x => x * 4);
+  transform.swap();
+  transform.run();
+  expectedData = sourceData.map(x => x * 4);
 
-// By default getData reads data from current Framebuffer.
-outTexData = transform.getData({packed: true});
+  // By default getData reads data from current Framebuffer.
+  outTexData = transform.getData({packed: true});
 
-t.deepEqual(outTexData, expectedData, `${name} Transform swap Textures`);
+  t.deepEqual(outTexData, expectedData, `${name} Transform swap Textures`);
 
   t.end();
 });

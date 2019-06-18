@@ -1,4 +1,3 @@
-import {assert} from '../utils';
 import {combineInjects, getQualifierDetails, typeToChannelSuffix} from '@luma.gl/shadertools';
 
 const SAMPLER_UNIFORM_PREFIX = 'transform_uSampler_';
@@ -8,7 +7,7 @@ const VS_POS_VARIABLE = 'transform_position';
 // Scan provided vertex shader
 // for each texture attribute, inject sampler instructions and build uniforms for sampler
 // for texture target, get varying type and inject position instruction
-export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, targetTexture}) {
+export function updateForTextures({vs, sourceTextureMap, targetTextureVarying}) {
   const texAttributeNames = Object.keys(sourceTextureMap);
   let sourceCount = texAttributeNames.length;
   let targetTextureType = null;
@@ -38,7 +37,6 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
     });
 
     if (targetTextureVarying) {
-      assert(targetTexture);
       const sizeName = `${SIZE_UNIFORM_PREFIX}${targetTextureVarying}`;
 
       const uniformDeclaration = `uniform vec2 ${sizeName};\n`;
