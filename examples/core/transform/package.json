@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "@luma.gl/core": "^7.1.0",
+    "@luma.gl/webgl": "^7.1.0",
     "probe.gl": "^3.0.1"
   },
   "devDependencies": {
