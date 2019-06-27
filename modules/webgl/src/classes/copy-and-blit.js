@@ -259,7 +259,7 @@ export function copyToTexture(
   return texture;
 }
 
-// NOTE: WEBLG2 only
+// NOTE: WEBGL2 only
 // Copies a rectangle of pixels between Framebuffer or Texture objects
 // eslint-disable-next-line max-statements, complexity
 export function blit(
