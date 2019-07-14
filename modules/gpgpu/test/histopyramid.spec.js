@@ -843,7 +843,7 @@ test('histopyramid#histopyramid_traversal_getWeight', t => {
   t.end();
 });
 
-test('histopyramid#histoPyramidGenerateIndices', t => {
+test.only('histopyramid#histoPyramidGenerateIndices', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -859,109 +859,113 @@ test('histopyramid#histoPyramidGenerateIndices', t => {
       [GL.UNPACK_FLIP_Y_WEBGL]: false
     }
   };
-  const sourceData = new Float32Array([
-    1,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    2,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0
-  ]);
-
-  const sourceTexture = new Texture2D(
-    gl,
-    Object.assign({}, TEX_OPTIONS, {
-      data: sourceData,
-      width: 4,
-      height: 4
-    })
-  );
-
-  const {locationAndIndexBuffer} = histoPyramidGenerateIndices(gl, {
-    texture: sourceTexture,
-    _readData: true
-  }); // _TODO: follow (gl, opts)
-  const locationAndIndexData = locationAndIndexBuffer.getData();
-  const actualData = [];
-  // Given order of vertex generation can be different between CPU and GPU, extract
-  // individual co-ordinates and key-index values and compare for equality.
-  for (let i = 0; i < locationAndIndexData.length; i += 4) {
-    actualData.push(locationAndIndexData.slice(i, i + 3)); // ignore keyIndex value
-  }
-  const expectedData = [
-    [0, 0, 0],
-    [1, 0, 0],
-    [3, 0, 0],
-    [0, 1, 0],
-    [2, 1, 0],
-    [1, 2, 0],
-    [1, 2, 1], // non zero local key-index only for stream expansion case (value in 2 in texture)
-    [3, 2, 0],
-    [0, 3, 0]
+  const TEST_CASES = [
+    {
+      name: 'source texture size 4 X 4',
+      sourceTexture: new Texture2D(
+        gl,
+        Object.assign({}, TEX_OPTIONS, {
+          data: new Float32Array([
+            // 4 X 4
+            1, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,
+            1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,
+            0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,
+            1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0
+          ]),
+          width: 4,
+          height: 4
+        })
+      ),
+      expectedLocationAndIndexData: [
+        [0, 0, 0],
+        [1, 0, 0],
+        [3, 0, 0],
+        [0, 1, 0],
+        [2, 1, 0],
+        [1, 2, 0],
+        [1, 2, 1], // non zero local key-index only for stream expansion case (value in 2 in texture)
+        [3, 2, 0],
+        [0, 3, 0]
+      ],
+      expectedBaseLevelIndexData: [0, 1, 3, 4, 6, 9, 9, 11, 12] // 9 is repeated because corresponding weight is 2
+    },
+    {
+      name: 'source texture size 2 X 4',
+      sourceTexture: new Texture2D(
+        gl,
+        Object.assign({}, TEX_OPTIONS, {
+          data: new Float32Array([
+            // 2 X 4
+            1, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,
+            1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0
+          ]),
+          width: 4,
+          height: 2
+        })
+      ),
+      expectedLocationAndIndexData: [
+        [0, 0, 0],
+        [1, 0, 0],
+        [3, 0, 0],
+        [0, 1, 0],
+        [2, 1, 0]
+      ],
+      expectedBaseLevelIndexData: [0, 1, 3, 4, 6]
+    },
+    // TODO failing, histo pyramid will use squared texture for base level => verify and fix this test
+    // above test width: 4 and height: 2 is passing because we are using width and texture-coord generation
+    // {
+    //   name: 'source texture size 4 X 1',
+    //   sourceTexture: new Texture2D(
+    //     gl,
+    //     Object.assign({}, TEX_OPTIONS, {
+    //       data: new Float32Array([
+    //         // 4 X 4
+    //         1, 0, 0, 0,
+    //         1, 0, 0, 0,
+    //         0, 0, 0, 0,
+    //         1, 0, 0, 0
+    //       ]),
+    //       width: 1,
+    //       height: 4
+    //     })
+    //   ),
+    //   expectedLocationAndIndexData: [
+    //     [0, 0, 0],
+    //     [0, 1, 0],
+    //     [0, 3, 0]
+    //   ],
+    //   expectedBaseLevelIndexData: [0, 1, 3]
+    // }
   ];
-  t.ok(equals(expectedData.length, actualData.length), 'Correct number of indices are generated');
-  let foundIndex = true;
-  expectedData.forEach(index => {
-    foundIndex = foundIndex && actualData.some(actualIndex => equals(index, actualIndex));
+
+  TEST_CASES.forEach(tc => {
+    const {sourceTexture, expectedLocationAndIndexData, expectedBaseLevelIndexData, name} = tc;
+    const {locationAndIndexBuffer, baseLevelIndexBuffer} = histoPyramidGenerateIndices(gl, {
+      texture: sourceTexture,
+      _readData: true
+    }); // _TODO: follow (gl, opts)
+    const locationAndIndexData = locationAndIndexBuffer.getData();
+    const actualData = [];
+    // Given order of vertex generation can be different between CPU and GPU, extract
+    // individual co-ordinates and key-index values and compare for equality.
+    for (let i = 0; i < locationAndIndexData.length; i += 4) {
+      actualData.push(locationAndIndexData.slice(i, i + 3)); // ignore keyIndex value
+    }
+    const baseLevelIndexData = baseLevelIndexBuffer.getData().sort((a, b) => a - b);
+    t.ok(equals(expectedLocationAndIndexData.length, actualData.length), `${name}: Correct number of indices are generated`);
+    let foundIndex = true;
+    expectedLocationAndIndexData.forEach(index => {
+      // eslint-disable-next-line max-nested-callbacks
+      foundIndex = foundIndex && actualData.some(actualIndex => equals(index, actualIndex));
+      if (!foundIndex) {
+        console.log(`Not found: ${index}`);
+      }
+    });
+    t.ok(foundIndex, `${name}: Generated indices should match`);
+    t.deepEquals(expectedBaseLevelIndexData, baseLevelIndexData, `${name}: base level index data matched`);
   });
-  t.ok(foundIndex, 'Generated indices should match');
+
+  // console.log(`baseLevelIndexBuffer: ${baseLevelIndexBuffer.getData()}`);
   t.end();
 });

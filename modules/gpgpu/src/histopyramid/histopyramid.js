@@ -161,6 +161,8 @@ export function histoPyramidGenerateIndices(gl, opts) {
   const keyIndex = new Buffer(gl, new Float32Array(keyIndexCount).map((_, index) => index));
   const locationAndIndex = new Buffer(gl, keyIndexCount * 4 * 4); // 4 floats for each key index
 
+  // index of the valid element with reference to base level texture
+  const baseLevelIndex = new Buffer(gl, keyIndexCount * 4); // 1 float for each key-index
   const transform = new Transform(gl, {
     sourceBuffers: {
       keyIndex
@@ -169,9 +171,10 @@ export function histoPyramidGenerateIndices(gl, opts) {
       flatPyramidTexture
     },
     feedbackBuffers: {
-      locationAndIndex
+      locationAndIndex,
+      baseLevelIndex
     },
-    varyings: ['locationAndIndex'],
+    varyings: ['locationAndIndex', 'baseLevelIndex'],
     vs: `${HISTOPYRAMID_TRAVERSAL_UTILS}${HISTOPYRAMID_TRAVERSAL_VS}`,
     elementCount: keyIndexCount
   });
@@ -181,5 +184,5 @@ export function histoPyramidGenerateIndices(gl, opts) {
     }
   });
 
-  return {locationAndIndexBuffer: locationAndIndex};
+  return {locationAndIndexBuffer: locationAndIndex, baseLevelIndexBuffer: baseLevelIndex};
 }

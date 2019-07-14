@@ -173,6 +173,7 @@ export const HISTOPYRAMID_TRAVERSAL_VS = `\
 attribute float keyIndex;
 attribute vec4 flatPyramidTexture;
 varying vec4 locationAndIndex;
+varying float baseLevelIndex;
 const int MAX_LEVELS = 12; // assuming max texture size of 4K
 
 uniform int numLevels;
@@ -198,5 +199,12 @@ void main()
     if (level == 0) { break; } // Work around for const expression restriction on for loops
   }
   locationAndIndex = vec4(p, currentKey, keyIndex);
+
+  // index in of the element in base level texture
+  // base level size is half of flat pyramid texture, but flat pyramid is compressed to represent 4 X 4 to 1, hence it size is same as base level
+  baseLevelIndex = p.y * transform_uSize_flatPyramidTexture.x + p.x; // 0,1,2,3,4,5,5,6,7, size is 2
+  //    baseLevelIndex = p.y * baseLevelSize.x + p.x  // 0,1,4,3,6,9,9,12,11 size is 4
+  // // baseLevelIndex = p.y; // 0,0,1,0,1,2,2,3,2
+  // // baseLevelIndex = p.x;    // 0,1,0,3,2,1,1,0,3
 }
 `;
