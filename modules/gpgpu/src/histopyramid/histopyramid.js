@@ -32,6 +32,48 @@ const channelToIndexMap = {
   ['w']: 3
 };
 
+const _debug = {
+  enabled: true,
+  nonZeroCount: 10,
+  undefinedCount: 10,
+  zeroCount: 10
+};
+
+/* eslint-disable */
+function _dumpTexture(title, baseTexture, textureData) {
+  let _zeroCount = 0;
+  let _undefinedCount = 0;
+  let _nonZeroCount = 0;
+  if (_debug.enabled) {
+    for (let ii = 0; ii < textureData.length; ii+=4) {
+      // const index = Math.floor(ii / 4);
+      const x = ii % baseTexture.width;
+      const y = Math.floor(ii / baseTexture.width);
+      const r = textureData[ii];
+      const g = textureData[ii + 1];
+      const b = textureData[ii + 2];
+      const a = textureData[ii + 3];
+      const isZero = _zeroCount < _debug.zeroCount && (r === 0 && g === 0 && b === 0 && a === 0);
+      const isUndefined = _undefinedCount < _debug.undefinedCount && (r === undefined || g === undefined || b === undefined || a === undefined);
+      const isNonZero = _nonZeroCount < _debug.nonZeroCount && Number.isFinite(r) && r !== 0; // Math.isFinite(r) && r !== 0 Math.isFinite(r) && r !== 0 Math.isFinite(r) && r !== 0)
+      if (isUndefined) {
+        console.log(`${title}:  ${ii} (${x}, ${y}) [${r} ${g} ${b} ${a}]`);
+        _undefinedCount++;
+      } else {
+        if (isZero) {
+          console.log(`${title}:  ${ii} (${x}, ${y}) [${r} ${g} ${b} ${a}]`);
+          _zeroCount++;
+        } else {
+          if (isNonZero) {
+            console.log(`${title}:  ${ii} (${x}, ${y}) [${r} ${g} ${b} ${a}]`);
+            _nonZeroCount++;
+          }
+        }
+      }
+    }
+  }
+
+}
 // returns a base level texture that packs given weight into a texture
 // each 2X2 region is mapped into RGBA channels of single pixel
 // returned texture is a squred power of two sized texture
@@ -39,14 +81,23 @@ const channelToIndexMap = {
 export function buildHistopyramidBaseLevel(gl, opts) {
   const {texture, channel = 'r', _readData = false} = opts;
   let {width, height} = texture;
+  if (_debug.enabled) {
+    console.log(`buildHistopyramidBaseLevel: original tex size ${width} X ${height}`);
+  }
   width = nextPowerOfTwo(width);
   height = nextPowerOfTwo(height);
+  if (_debug.enabled) {
+    console.log(`buildHistopyramidBaseLevel: Adusted to POT tex size ${width} X ${height}`);
+  }
   // Use sqaured next power of two size, then use half of it since we are packing 2X2 group into a single RGBA pixel
   const size = (width > height ? width : height) / 2;
   const baseTexture = cloneTextureFrom(texture, {
     width: size,
-    height: size
+    height: size,
   });
+  if (_debug.enabled) {
+    console.log(`buildHistopyramidBaseLevel: baseTexture size ${baseTexture.width} X ${baseTexture.height}`);
+  }
 
   // build individual pyramid textures
   const transform = new Transform(gl, {
@@ -62,14 +113,19 @@ export function buildHistopyramidBaseLevel(gl, opts) {
     uniforms: {
       channel: channelToIndexMap[channel] || 0,
       padingPixelValue: [0, 0, 0, 0]
+    },
+    parameters: {
+      blend: false,
+      depthTest: false
     }
   });
   // _readData is debug only option
   let textureData;
   // when base textuer size is 1X1, there are no more level to be generated
   // so read the texture data to be provided as base level data.
-  if (_readData || size === 1) {
+  if (_readData || size === 1 || _debug.enabled) {
     textureData = transform.getData({packed: true});
+    _dumpTexture('buildHistopyramidBaseLevel', baseTexture, textureData);
   }
   const flatPyramidSize = size * 2;
   const flatPyramidTexture = cloneTextureFrom(texture, {
@@ -133,7 +189,12 @@ export function getHistoPyramid(gl, opts) {
         _targetTexture: pyramidTextures[i],
         elementCount: pyramidTextures[i].width * pyramidTextures[i].height
       });
-      transform.run();
+      transform.run({
+        parameters: {
+          blend: false,
+          depthTest: false
+        }
+      });
 
       // copy the result to the flaten pyramid texture
       const framebuffer = transform.getFramebuffer();
@@ -144,6 +205,14 @@ export function getHistoPyramid(gl, opts) {
       });
 
       flatOffset += outSize[0];
+      const _debugData = transform.getData();
+      console.log(`level: ${i} ${pyramidTextures[i].width}X${pyramidTextures[i].height}`);
+      _dumpTexture(`level: ${i}`, pyramidTextures[i], _debugData);
+      // for (let ii = 0; ii < _debugData.length; ii+=4) {
+      //   if (_debugData[ii*4] !== 0 || _debugData[ii*4 + 1] !== 0 || _debugData[ii*4 +2 ] !== 0 || _debugData[ii*4 + 3] !== 0) {
+      //     // console.log(`level: ${i} index: ${ii/4} : ${_debugData[ii*4]} ${_debugData[ii*4 + 1]} ${_debugData[ii*4 + 2]} ${_debugData[ii*4 + 3]}`)
+      //   }
+      // }
     }
     topLevelData = transform.getData();
   }
@@ -184,6 +253,10 @@ export function histoPyramidGenerateIndices(gl, opts) {
       numLevels: levelCount,
       width,
       height
+    },
+    parameters: {
+      blend: false,
+      depthTest: false
     }
   });
 

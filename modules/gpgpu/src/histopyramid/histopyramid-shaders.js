@@ -3,7 +3,7 @@
 // Following shaders implement Histopyramid operations as described in 'High‐speed marching cubes using histopyramids' by Dyken C, Ziegler G, Theobalt C and Seidel H
 // Link to the paper: http://olmozavala.com/Custom/OpenGL/Tutorials/OpenGL4_Examples/MarchingCubes_Dyken/Dyken_et_al-2008-Computer_Graphics_Forum.pdf
 
-export const HISTOPYRAMID_BUILD_VS_UTILS = `\
+const HISTOPYRAMID_BUILD_GET_COORD = `\
 // Get current pixel indices for a given size
 vec2 histoPyramid_getPixelIndices(vec2 size) {
   vec2 pixelOffset = transform_getPixelSizeHalf(size);
@@ -31,7 +31,9 @@ vec2 histoPyramid_getTexCoord(vec2 size, vec2 scale, vec2 offset) {
 
   return texCoord + (offset / scaledSize) + inPixelOffset;
 }
+`;
 
+const HISTOPYRAMID_BUILD_GET_INPUT = `\
 // returns pixel value from higher level texture based on scale and offset
 // texSampler: higher level texture sampler
 // size: lower level texture size
@@ -43,6 +45,24 @@ vec4 histoPyramid_getInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 off
   return textureColor;
 }
 `;
+
+const HISTOPYRAMID_BUILD_GET_BASE_INPUT = `\
+
+// returns pixel value from higher level texture based on scale and offset
+// texSampler: higher level texture sampler
+// size: lower level texture size
+// scale: usually (2, 2)
+// offset: offset with-in 2X2 block of higher level texture
+vec4 histoPyramid_getBaseInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 offset) {
+  vec2 texCoord = histoPyramid_getTexCoord(size, scale, offset);
+  vec4 textureColor = texture2D(texSampler, texCoord);
+  return vec4(textureColor.r > 0. ? 1. : 0., textureColor.g > 0. ? 1. : 0., textureColor.b > 0. ? 1. : 0., textureColor.a > 0. ? 1. : 0.);
+}
+`;
+
+export const HISTOPYRAMID_BUILD_VS_UTILS = `${HISTOPYRAMID_BUILD_GET_COORD}${HISTOPYRAMID_BUILD_GET_INPUT}${HISTOPYRAMID_BUILD_GET_BASE_INPUT}`;
+
+
 
 // Vertex shader to build histopyramid
 export const HISTOPYRAMID_BUILD_VS = `\
@@ -63,6 +83,24 @@ void main()
     rightPixel.r + rightPixel.g + rightPixel.b + rightPixel.a,
     bottomPixel.r + bottomPixel.g + bottomPixel.b + bottomPixel.a,
     rightBottomPixel.r + rightBottomPixel.g + rightBottomPixel.b + rightBottomPixel.a
+
+    // // all ones in big, then all 0's
+    // pixel.g,
+    // rightPixel.g,
+    // bottomPixel.g,
+    // rightBottomPixel.g
+
+    // // all ones in big, then all 0's
+    // pixel.b,
+    // rightPixel.b,
+    // bottomPixel.b,
+    // rightBottomPixel.b
+
+    // // all ones in big, then all 0's
+    // pixel.a,
+    // rightPixel.a,
+    // bottomPixel.a,
+    // rightBottomPixel.a
   );
 }
 `;
@@ -94,19 +132,19 @@ void main()
   bool yPlusOneInside = pixelIndices.y + 1. < baseLevelSize.y;
 
   vec4 pixel = (xInside && yInside)
-    ? histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 0))
+    ? histoPyramid_getBaseInput(transform_uSampler_inTexture, size, scale, vec2(0, 0))
     : padingPixelValue;
 
   vec4 rightPixel = (xPlusOneInside && yInside)
-    ? histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 0))
+    ? histoPyramid_getBaseInput(transform_uSampler_inTexture, size, scale, vec2(1, 0))
     : padingPixelValue;
 
   vec4 topPixel = (xInside && yPlusOneInside)
-    ? histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(0, 1))
+    ? histoPyramid_getBaseInput(transform_uSampler_inTexture, size, scale, vec2(0, 1))
     : padingPixelValue;
 
   vec4 rightTopPixel = (xPlusOneInside && yPlusOneInside)
-    ? histoPyramid_getInput(transform_uSampler_inTexture, size, scale, vec2(1, 1))
+    ? histoPyramid_getBaseInput(transform_uSampler_inTexture, size, scale, vec2(1, 1))
     : padingPixelValue;
 
   if (channel == 0) {

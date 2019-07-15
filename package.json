@@ -36,6 +36,7 @@
     "start": "echo 'Please see luma.gl website for how to run examples' && open http://uber.github.io/luma.gl/#/documentation/getting-started/examples",
     "clean": "ocular-clean",
     "build": "ocular-clean && lerna run pre-build && ocular-build",
+    "justbuild": "ocular-build",
     "cover": "ocular-test cover",
     "lint": "ocular-lint",
     "publish": "ocular-publish",

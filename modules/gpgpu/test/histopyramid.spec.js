@@ -843,232 +843,279 @@ test('histopyramid#histopyramid_traversal_getWeight', t => {
   t.end();
 });
 
-test('histopyramid#histoPyramidGenerateIndices', t => {
+
+const TEX_OPTIONS = {
+  format: GL.RGBA32F,
+  dataFormat: GL.RGBA,
+  type: GL.FLOAT,
+  mipmaps: false,
+  pixelStore: {
+    [GL.UNPACK_FLIP_Y_WEBGL]: false
+  }
+};
+
+function getTextureData(width, height, locationData) {
+  const data = new Float32Array(width * height * 4).fill(0);
+  const indices = new Float32Array(locationData.length);
+  locationData.forEach((location, i) => {
+    const index = location[1] * width + location[0];
+    data[index*4] = 1;
+    indices[i] = index;
+  });
+  return {data, indices: indices.sort((a, b) => a - b)};
+}
+
+function getTestingParams(tc) {
+  // const {sourceTexture, expectedLocationAndIndexData, expectedBaseLevelIndexData, name} = getTestingParams(tc);
+  const {expectedLocationAndIndexData, width, height, name} = tc;
+  let sourceTexture = tc.sourceTexture;
+  let expectedBaseLevelIndexData = tc.expectedBaseLevelIndexData;
+  if (!sourceTexture) {
+    const {data, indices} = getTextureData(width, height, expectedLocationAndIndexData);
+    sourceTexture = new Texture2D(
+      gl,
+      Object.assign({}, TEX_OPTIONS, {
+        data,
+        width,
+        height
+      }));
+    expectedBaseLevelIndexData = indices;
+  }
+  return {sourceTexture, expectedLocationAndIndexData, expectedBaseLevelIndexData, name};
+
+}
+
+test.only('histopyramid#histoPyramidGenerateIndices', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
   }
 
-  const TEX_OPTIONS = {
-    format: GL.RGBA32F,
-    dataFormat: GL.RGBA,
-    type: GL.FLOAT,
-    mipmaps: false,
-    pixelStore: {
-      [GL.UNPACK_FLIP_Y_WEBGL]: false
-    }
-  };
   const TEST_CASES = [
+    // {
+    //   name: 'source texture size 4 X 4',
+    //   sourceTexture: new Texture2D(
+    //     gl,
+    //     Object.assign({}, TEX_OPTIONS, {
+    //       data: new Float32Array([
+    //         // 4 X 4
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         2,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0
+    //       ]),
+    //       width: 4,
+    //       height: 4
+    //     })
+    //   ),
+    //   expectedLocationAndIndexData: [
+    //     [0, 0, 0],
+    //     [1, 0, 0],
+    //     [3, 0, 0],
+    //     [0, 1, 0],
+    //     [2, 1, 0],
+    //     [1, 2, 0],
+    //     [1, 2, 1], // non zero local key-index only for stream expansion case (value in 2 in texture)
+    //     [3, 2, 0],
+    //     [0, 3, 0]
+    //   ],
+    //   expectedBaseLevelIndexData: [0, 1, 3, 4, 6, 9, 9, 11, 12] // 9 is repeated because corresponding weight is 2
+    // },
+    // {
+    //   name: 'source texture size 2 X 4',
+    //   sourceTexture: new Texture2D(
+    //     gl,
+    //     Object.assign({}, TEX_OPTIONS, {
+    //       data: new Float32Array([
+    //         // 2 X 4
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0
+    //       ]),
+    //       width: 4,
+    //       height: 2
+    //     })
+    //   ),
+    //   expectedLocationAndIndexData: [[0, 0, 0], [1, 0, 0], [3, 0, 0], [0, 1, 0], [2, 1, 0]],
+    //   expectedBaseLevelIndexData: [0, 1, 3, 4, 6]
+    // },
+    // {
+    //   name: 'source texture size 4 X 1',
+    //   sourceTexture: new Texture2D(
+    //     gl,
+    //     Object.assign({}, TEX_OPTIONS, {
+    //       data: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]),
+    //       width: 1,
+    //       height: 4
+    //     })
+    //   ),
+    //   expectedLocationAndIndexData: [[0, 0, 0], [0, 1, 0], [0, 3, 0]],
+    //   expectedBaseLevelIndexData: [0, 1, 3]
+    // },
+    // {
+    //   name: 'source texture size 4 X 2',
+    //   sourceTexture: new Texture2D(
+    //     gl,
+    //     Object.assign({}, TEX_OPTIONS, {
+    //       data: new Float32Array([
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         2,
+    //         0,
+    //         0,
+    //         3,
+    //         1,
+    //         0,
+    //         0,
+    //         1,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         1
+    //       ]),
+    //       width: 2,
+    //       height: 4
+    //     })
+    //   ),
+    //   expectedLocationAndIndexData: [
+    //     // only channel 'r'
+    //     [0, 0, 0],
+    //     [1, 0, 0],
+    //     [0, 1, 0],
+    //     [1, 1, 0],
+    //     [1, 2, 0],
+    //     [1, 2, 1],
+    //     [1, 2, 2],
+    //     [0, 3, 0]
+    //   ],
+    //   expectedBaseLevelIndexData: [0, 1, 2, 3, 5, 5, 5, 6]
+    // },
     {
-      name: 'source texture size 4 X 4',
-      sourceTexture: new Texture2D(
-        gl,
-        Object.assign({}, TEX_OPTIONS, {
-          data: new Float32Array([
-            // 4 X 4
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            2,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]),
-          width: 4,
-          height: 4
-        })
-      ),
-      expectedLocationAndIndexData: [
-        [0, 0, 0],
-        [1, 0, 0],
-        [3, 0, 0],
-        [0, 1, 0],
-        [2, 1, 0],
-        [1, 2, 0],
-        [1, 2, 1], // non zero local key-index only for stream expansion case (value in 2 in texture)
-        [3, 2, 0],
-        [0, 3, 0]
-      ],
-      expectedBaseLevelIndexData: [0, 1, 3, 4, 6, 9, 9, 11, 12] // 9 is repeated because corresponding weight is 2
-    },
-    {
-      name: 'source texture size 2 X 4',
-      sourceTexture: new Texture2D(
-        gl,
-        Object.assign({}, TEX_OPTIONS, {
-          data: new Float32Array([
-            // 2 X 4
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]),
-          width: 4,
-          height: 2
-        })
-      ),
-      expectedLocationAndIndexData: [[0, 0, 0], [1, 0, 0], [3, 0, 0], [0, 1, 0], [2, 1, 0]],
-      expectedBaseLevelIndexData: [0, 1, 3, 4, 6]
-    },
-    {
-      name: 'source texture size 4 X 1',
-      sourceTexture: new Texture2D(
-        gl,
-        Object.assign({}, TEX_OPTIONS, {
-          data: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]),
-          width: 1,
-          height: 4
-        })
-      ),
-      expectedLocationAndIndexData: [[0, 0, 0], [0, 1, 0], [0, 3, 0]],
-      expectedBaseLevelIndexData: [0, 1, 3]
-    },
-    {
-      name: 'source texture size 4 X 2',
-      sourceTexture: new Texture2D(
-        gl,
-        Object.assign({}, TEX_OPTIONS, {
-          data: new Float32Array([
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            2,
-            0,
-            0,
-            3,
-            1,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1
-          ]),
-          width: 2,
-          height: 4
-        })
-      ),
+      name: 'source texture size 1024 X 1024',
       expectedLocationAndIndexData: [
         // only channel 'r'
         [0, 0, 0],
-        [1, 0, 0],
         [0, 1, 0],
-        [1, 1, 0],
-        [1, 2, 0],
-        [1, 2, 1],
-        [1, 2, 2],
-        [0, 3, 0]
+        [1, 0, 0],
+        [2, 0, 0]
       ],
-      expectedBaseLevelIndexData: [0, 1, 2, 3, 5, 5, 5, 6]
+      width: 1024,
+      height: 1024,
     }
+
   ];
 
   TEST_CASES.forEach(tc => {
-    const {sourceTexture, expectedLocationAndIndexData, expectedBaseLevelIndexData, name} = tc;
+    const {sourceTexture, expectedLocationAndIndexData, expectedBaseLevelIndexData, name} = getTestingParams(tc);
+
     const {locationAndIndexBuffer, baseLevelIndexBuffer} = histoPyramidGenerateIndices(gl, {
       texture: sourceTexture,
       _readData: true
