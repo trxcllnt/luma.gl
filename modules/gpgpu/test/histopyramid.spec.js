@@ -843,7 +843,7 @@ test('histopyramid#histopyramid_traversal_getWeight', t => {
   t.end();
 });
 
-test.only('histopyramid#histoPyramidGenerateIndices', t => {
+test('histopyramid#histoPyramidGenerateIndices', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -867,10 +867,70 @@ test.only('histopyramid#histoPyramidGenerateIndices', t => {
         Object.assign({}, TEX_OPTIONS, {
           data: new Float32Array([
             // 4 X 4
-            1, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,
-            1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,
-            0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,
-            1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
           ]),
           width: 4,
           height: 4
@@ -896,47 +956,115 @@ test.only('histopyramid#histoPyramidGenerateIndices', t => {
         Object.assign({}, TEX_OPTIONS, {
           data: new Float32Array([
             // 2 X 4
-            1, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,
-            1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
           ]),
           width: 4,
           height: 2
         })
       ),
-      expectedLocationAndIndexData: [
-        [0, 0, 0],
-        [1, 0, 0],
-        [3, 0, 0],
-        [0, 1, 0],
-        [2, 1, 0]
-      ],
+      expectedLocationAndIndexData: [[0, 0, 0], [1, 0, 0], [3, 0, 0], [0, 1, 0], [2, 1, 0]],
       expectedBaseLevelIndexData: [0, 1, 3, 4, 6]
     },
-    // TODO failing, histo pyramid will use squared texture for base level => verify and fix this test
-    // above test width: 4 and height: 2 is passing because we are using width and texture-coord generation
-    // {
-    //   name: 'source texture size 4 X 1',
-    //   sourceTexture: new Texture2D(
-    //     gl,
-    //     Object.assign({}, TEX_OPTIONS, {
-    //       data: new Float32Array([
-    //         // 4 X 4
-    //         1, 0, 0, 0,
-    //         1, 0, 0, 0,
-    //         0, 0, 0, 0,
-    //         1, 0, 0, 0
-    //       ]),
-    //       width: 1,
-    //       height: 4
-    //     })
-    //   ),
-    //   expectedLocationAndIndexData: [
-    //     [0, 0, 0],
-    //     [0, 1, 0],
-    //     [0, 3, 0]
-    //   ],
-    //   expectedBaseLevelIndexData: [0, 1, 3]
-    // }
+    {
+      name: 'source texture size 4 X 1',
+      sourceTexture: new Texture2D(
+        gl,
+        Object.assign({}, TEX_OPTIONS, {
+          data: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]),
+          width: 1,
+          height: 4
+        })
+      ),
+      expectedLocationAndIndexData: [[0, 0, 0], [0, 1, 0], [0, 3, 0]],
+      expectedBaseLevelIndexData: [0, 1, 3]
+    },
+    {
+      name: 'source texture size 4 X 2',
+      sourceTexture: new Texture2D(
+        gl,
+        Object.assign({}, TEX_OPTIONS, {
+          data: new Float32Array([
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            3,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ]),
+          width: 2,
+          height: 4
+        })
+      ),
+      expectedLocationAndIndexData: [
+        // only channel 'r'
+        [0, 0, 0],
+        [1, 0, 0],
+        [0, 1, 0],
+        [1, 1, 0],
+        [1, 2, 0],
+        [1, 2, 1],
+        [1, 2, 2],
+        [0, 3, 0]
+      ],
+      expectedBaseLevelIndexData: [0, 1, 2, 3, 5, 5, 5, 6]
+    }
   ];
 
   TEST_CASES.forEach(tc => {
@@ -953,17 +1081,21 @@ test.only('histopyramid#histoPyramidGenerateIndices', t => {
       actualData.push(locationAndIndexData.slice(i, i + 3)); // ignore keyIndex value
     }
     const baseLevelIndexData = baseLevelIndexBuffer.getData().sort((a, b) => a - b);
-    t.ok(equals(expectedLocationAndIndexData.length, actualData.length), `${name}: Correct number of indices are generated`);
+    t.ok(
+      equals(expectedLocationAndIndexData.length, actualData.length),
+      `${name}: Correct number of indices are generated`
+    );
     let foundIndex = true;
     expectedLocationAndIndexData.forEach(index => {
       // eslint-disable-next-line max-nested-callbacks
       foundIndex = foundIndex && actualData.some(actualIndex => equals(index, actualIndex));
-      if (!foundIndex) {
-        console.log(`Not found: ${index}`);
-      }
     });
     t.ok(foundIndex, `${name}: Generated indices should match`);
-    t.deepEquals(expectedBaseLevelIndexData, baseLevelIndexData, `${name}: base level index data matched`);
+    t.deepEquals(
+      expectedBaseLevelIndexData,
+      baseLevelIndexData,
+      `${name}: base level index data matched`
+    );
   });
 
   // console.log(`baseLevelIndexBuffer: ${baseLevelIndexBuffer.getData()}`);

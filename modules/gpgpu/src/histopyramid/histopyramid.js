@@ -155,6 +155,7 @@ export function getHistoPyramid(gl, opts) {
 // Returns object
 // *locationAndIndexBuffer : Buffer contains one vec4 for each non zero weight. XY represent loation, Z represents local-key index and W represent key-index
 export function histoPyramidGenerateIndices(gl, opts) {
+  const {width, height} = opts.texture;
   const {flatPyramidTexture, levelCount, topLevelData} = getHistoPyramid(gl, opts);
 
   const keyIndexCount = topLevelData[0] + topLevelData[1] + topLevelData[2] + topLevelData[3];
@@ -180,7 +181,9 @@ export function histoPyramidGenerateIndices(gl, opts) {
   });
   transform.run({
     uniforms: {
-      numLevels: levelCount
+      numLevels: levelCount,
+      width,
+      height
     }
   });
 
