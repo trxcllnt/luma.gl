@@ -718,6 +718,67 @@ void main()
 `
   },
   {
+    name: 'RGBA-FLOAT 2 X 4',
+    sourceData: new Float32Array([
+      // 2 X 4
+      1,
+      0,
+      0,
+      0,
+
+      1,
+      0,
+      0,
+      0,
+
+      0,
+      0,
+      0,
+      0,
+
+      1,
+      0,
+      0,
+      0,
+
+      1,
+      0,
+      0,
+      0,
+
+      0,
+      0,
+      0,
+      0,
+
+      1,
+      0,
+      0,
+      0,
+
+      0,
+      0,
+      0,
+      0
+    ]),
+    format: GL.RGBA32F,
+    dataFormat: GL.RGBA,
+    type: GL.FLOAT,
+    width: 2,
+    height: 4,
+    vs: `\
+#version 300 es
+in vec4 inTexture;
+out vec4 outTexture;
+
+void main()
+{
+  outTexture = 2. *  inTexture;
+}
+`
+  },
+
+  {
     name: 'RED-FLOAT',
     sourceData: new Float32Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
     format: GL.R32F,
