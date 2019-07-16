@@ -119,7 +119,7 @@ export default class Program extends Resource {
     uniforms,
     samplers
   }) {
-    console.log(`program.draw: vertexCount: ${vertexCount}`);
+    // console.log(`program.draw: vertexCount: ${vertexCount}`);
     if (uniforms || samplers) {
       // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
       log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();

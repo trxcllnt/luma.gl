@@ -30,8 +30,11 @@ import {
   _histoPyramidGenerateIndices as histoPyramidGenerateIndices
 } from '@luma.gl/gpgpu';
 import {
+  HISTOPYRAMID_MASK,
   HISTOPYRAMID_BUILD_VS_UTILS,
-  HISTOPYRAMID_TRAVERSAL_UTILS
+  HISTOPYRAMID_TRAVERSAL_UTILS,
+  histoPyramidMaskToVec4,
+  getHistoPyramidBuildBaseInputFunction
 } from '@luma.gl/gpgpu/histopyramid/histopyramid-shaders';
 
 const gl = fixture.gl2;
@@ -868,258 +871,250 @@ function getTextureData(width, height, locationData) {
 function getTestingParams(tc) {
   // const {sourceTexture, expectedLocationAndIndexData, expectedBaseLevelIndexData, name} = getTestingParams(tc);
   const {expectedLocationAndIndexData, width, height, name} = tc;
-  let sourceTexture = tc.sourceTexture;
+  let sourceData = tc.sourceData;
   let expectedBaseLevelIndexData = tc.expectedBaseLevelIndexData;
-  if (!sourceTexture) {
-    const {data, indices} = getTextureData(width, height, expectedLocationAndIndexData);
-    sourceTexture = new Texture2D(
-      gl,
-      Object.assign({}, TEX_OPTIONS, {
-        data,
-        width,
-        height
-      }));
-    expectedBaseLevelIndexData = indices;
+  if (!sourceData) {
+    const textureData = getTextureData(width, height, expectedLocationAndIndexData);
+    sourceData = textureData.data;
+    expectedBaseLevelIndexData = textureData.indices;
   }
-  return {sourceTexture, expectedLocationAndIndexData, expectedBaseLevelIndexData, name};
+  const sourceTexture = new Texture2D(
+    gl,
+    Object.assign({}, TEX_OPTIONS, {
+      data: sourceData,
+      width,
+      height
+    }));
+
+  return {sourceTexture, sourceData, expectedLocationAndIndexData, expectedBaseLevelIndexData, name};
 
 }
 
-test.only('histopyramid#histoPyramidGenerateIndices', t => {
+const GENERATE_INDICES_TEST_CASES = [
+  {
+    name: 'source texture size 4 X 4',
+    sourceData: new Float32Array([
+          // 4 X 4
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]),
+    width: 4,
+    height: 4,
+    expectedLocationAndIndexData: [
+      [0, 0, 0],
+      [1, 0, 0],
+      [3, 0, 0],
+      [0, 1, 0],
+      [2, 1, 0],
+      [1, 2, 0],
+      [1, 2, 1], // non zero local key-index only for stream expansion case (value in 2 in texture)
+      [3, 2, 0],
+      [0, 3, 0]
+    ],
+    expectedBaseLevelIndexData: [0, 1, 3, 4, 6, 9, 9, 11, 12] // 9 is repeated because corresponding weight is 2
+  },
+  {
+    name: 'source texture size 2 X 4',
+    sourceData: new Float32Array([
+          // 2 X 4
+          1,
+          0,
+          0,
+          0,
+
+          1,
+          0,
+          0,
+          0,
+
+          0,
+          0,
+          0,
+          0,
+
+          1,
+          0,
+          0,
+          0,
+
+          1,
+          0,
+          0,
+          0,
+
+          0,
+          0,
+          0,
+          0,
+
+          1,
+          0,
+          0,
+          0,
+
+          0,
+          0,
+          0,
+          0
+        ]),
+    width: 4,
+    height: 2,
+    expectedLocationAndIndexData: [[0, 0, 0], [1, 0, 0], [3, 0, 0], [0, 1, 0], [2, 1, 0]],
+    expectedBaseLevelIndexData: [0, 1, 3, 4, 6]
+  },
+  {
+    name: 'source texture size 4 X 1',
+    sourceData: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]),
+    width: 1,
+    height: 4,
+    expectedLocationAndIndexData: [[0, 0, 0], [0, 1, 0], [0, 3, 0]],
+    expectedBaseLevelIndexData: [0, 1, 3]
+  },
+  {
+    name: 'source texture size 4 X 2',
+    sourceData: new Float32Array([
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          2,
+          0,
+          0,
+          3,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]),
+    width: 2,
+    height: 4,
+    expectedLocationAndIndexData: [
+      // only channel 'r'
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+      [1, 1, 0],
+      [1, 2, 0],
+      [1, 2, 1],
+      [1, 2, 2],
+      [0, 3, 0]
+    ],
+    expectedBaseLevelIndexData: [0, 1, 2, 3, 5, 5, 5, 6]
+  },
+  {
+    name: 'source texture size 1024 X 1024',
+    expectedLocationAndIndexData: [
+      // only channel 'r'
+      [0, 0, 0],
+      [0, 1, 0],
+      [1, 0, 0],
+      [2, 0, 0]
+    ],
+    width: 1024,
+    height: 1024,
+    mask: HISTOPYRAMID_MASK.NON_ZERO
+  },
+];
+
+
+test('histopyramid#histoPyramidGenerateIndices', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
   }
 
-  const TEST_CASES = [
-    // {
-    //   name: 'source texture size 4 X 4',
-    //   sourceTexture: new Texture2D(
-    //     gl,
-    //     Object.assign({}, TEX_OPTIONS, {
-    //       data: new Float32Array([
-    //         // 4 X 4
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         2,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0
-    //       ]),
-    //       width: 4,
-    //       height: 4
-    //     })
-    //   ),
-    //   expectedLocationAndIndexData: [
-    //     [0, 0, 0],
-    //     [1, 0, 0],
-    //     [3, 0, 0],
-    //     [0, 1, 0],
-    //     [2, 1, 0],
-    //     [1, 2, 0],
-    //     [1, 2, 1], // non zero local key-index only for stream expansion case (value in 2 in texture)
-    //     [3, 2, 0],
-    //     [0, 3, 0]
-    //   ],
-    //   expectedBaseLevelIndexData: [0, 1, 3, 4, 6, 9, 9, 11, 12] // 9 is repeated because corresponding weight is 2
-    // },
-    // {
-    //   name: 'source texture size 2 X 4',
-    //   sourceTexture: new Texture2D(
-    //     gl,
-    //     Object.assign({}, TEX_OPTIONS, {
-    //       data: new Float32Array([
-    //         // 2 X 4
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0
-    //       ]),
-    //       width: 4,
-    //       height: 2
-    //     })
-    //   ),
-    //   expectedLocationAndIndexData: [[0, 0, 0], [1, 0, 0], [3, 0, 0], [0, 1, 0], [2, 1, 0]],
-    //   expectedBaseLevelIndexData: [0, 1, 3, 4, 6]
-    // },
-    // {
-    //   name: 'source texture size 4 X 1',
-    //   sourceTexture: new Texture2D(
-    //     gl,
-    //     Object.assign({}, TEX_OPTIONS, {
-    //       data: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]),
-    //       width: 1,
-    //       height: 4
-    //     })
-    //   ),
-    //   expectedLocationAndIndexData: [[0, 0, 0], [0, 1, 0], [0, 3, 0]],
-    //   expectedBaseLevelIndexData: [0, 1, 3]
-    // },
-    // {
-    //   name: 'source texture size 4 X 2',
-    //   sourceTexture: new Texture2D(
-    //     gl,
-    //     Object.assign({}, TEX_OPTIONS, {
-    //       data: new Float32Array([
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         2,
-    //         0,
-    //         0,
-    //         3,
-    //         1,
-    //         0,
-    //         0,
-    //         1,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         0,
-    //         1
-    //       ]),
-    //       width: 2,
-    //       height: 4
-    //     })
-    //   ),
-    //   expectedLocationAndIndexData: [
-    //     // only channel 'r'
-    //     [0, 0, 0],
-    //     [1, 0, 0],
-    //     [0, 1, 0],
-    //     [1, 1, 0],
-    //     [1, 2, 0],
-    //     [1, 2, 1],
-    //     [1, 2, 2],
-    //     [0, 3, 0]
-    //   ],
-    //   expectedBaseLevelIndexData: [0, 1, 2, 3, 5, 5, 5, 6]
-    // },
-    {
-      name: 'source texture size 1024 X 1024',
-      expectedLocationAndIndexData: [
-        // only channel 'r'
-        [0, 0, 0],
-        [0, 1, 0],
-        [1, 0, 0],
-        [2, 0, 0]
-      ],
-      width: 1024,
-      height: 1024,
-    }
-
-  ];
-
-  TEST_CASES.forEach(tc => {
+  GENERATE_INDICES_TEST_CASES.forEach(tc => {
     const {sourceTexture, expectedLocationAndIndexData, expectedBaseLevelIndexData, name} = getTestingParams(tc);
+    const {mask = HISTOPYRAMID_MASK.NONE} = tc;
 
     const {locationAndIndexBuffer, baseLevelIndexBuffer} = histoPyramidGenerateIndices(gl, {
       texture: sourceTexture,
-      _readData: true
-    }); // _TODO: follow (gl, opts)
+      _readData: true,
+      mask
+    });
     const locationAndIndexData = locationAndIndexBuffer.getData();
     const actualData = [];
     // Given order of vertex generation can be different between CPU and GPU, extract
@@ -1146,5 +1141,130 @@ test.only('histopyramid#histoPyramidGenerateIndices', t => {
   });
 
   // console.log(`baseLevelIndexBuffer: ${baseLevelIndexBuffer.getData()}`);
+  t.end();
+});
+
+test('histopyramid#histoPyramidMaskToVec4', t => {
+  [
+    {
+      name: 'mask: NONE should return same String',
+      mask: HISTOPYRAMID_MASK.NONE,
+      color: 'colorVar',
+      expected: 'colorVar'
+    },
+    {
+      name: 'mask: NON_ZERO should perform non-zero masking',
+      mask: HISTOPYRAMID_MASK.NON_ZERO,
+      color: 'colorVar',
+      expected: 'vec4(colorVar.r > 0. ? 1. : 0., colorVar.g > 0. ? 1. : 0., colorVar.b > 0. ? 1. : 0., colorVar.a > 0. ? 1. : 0.)'
+    }
+  ].forEach(tc => {
+    t.equal(tc.expected, histoPyramidMaskToVec4(tc.color, tc.mask), tc.name);
+  });
+  t.end();
+});
+
+test('histopyramid#getHistoPyramidBuildBaseInputFunction', t => {
+  [
+    {
+      name: 'mask: NONE should return correct GLSL function',
+      mask: HISTOPYRAMID_MASK.NONE,
+      color: 'colorVar',
+      expected: `\
+
+vec4 histoPyramid_getBaseInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 offset) {
+  vec2 texCoord = histoPyramid_getTexCoord(size, scale, offset);
+  vec4 textureColor = texture2D(texSampler, texCoord);
+  return textureColor;
+}
+`
+    },
+    {
+      name: 'mask: NON_ZERO should return correct glsl function',
+      mask: HISTOPYRAMID_MASK.NON_ZERO,
+      color: 'colorVar',
+      expected: `\
+
+vec4 histoPyramid_getBaseInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 offset) {
+  vec2 texCoord = histoPyramid_getTexCoord(size, scale, offset);
+  vec4 textureColor = texture2D(texSampler, texCoord);
+  return vec4(textureColor.r > 0. ? 1. : 0., textureColor.g > 0. ? 1. : 0., textureColor.b > 0. ? 1. : 0., textureColor.a > 0. ? 1. : 0.);
+}
+`
+    }
+  ].forEach(tc => {
+    t.equal(tc.expected, getHistoPyramidBuildBaseInputFunction(tc.mask), tc.name);
+  });
+  t.end();
+});
+
+test.only('histopyramid#histoPyramidGenerateIndices with Transform', t => {
+  const VS = `\
+#version 300 es
+in vec4 inTexture;
+out vec4 outTexture;
+
+void main()
+{
+  outTexture = 2. *  inTexture;
+}
+`
+
+  GENERATE_INDICES_TEST_CASES.forEach(tc => {
+
+    const {sourceTexture, sourceData, expectedLocationAndIndexData, expectedBaseLevelIndexData, name} = getTestingParams(tc);
+    const {mask = HISTOPYRAMID_MASK.NONE} = tc;
+
+    const {locationAndIndexBuffer, baseLevelIndexBuffer} = histoPyramidGenerateIndices(gl, {
+      texture: sourceTexture,
+      _readData: true,
+      mask
+    });
+    const baseLevelIndexData = baseLevelIndexBuffer.getData();
+    const baseLevelIndexCount = baseLevelIndexData.length;
+    const transform = new Transform(gl, {
+      _sourceTextures: {
+        inTexture: sourceTexture
+      },
+      _targetTexture: 'inTexture',
+      _targetTextureVarying: 'outTexture',
+      vs: VS,
+      elementCount: sourceData.length
+    });
+
+    // Temporary HACK (update transform API)
+    transform.model.setVertexCount(baseLevelIndexCount);
+    if (transform.elementIDBuffer !== baseLevelIndexBuffer) {
+      transform.elementIDBuffer.delete();
+      transform.elementIDBuffer = baseLevelIndexBuffer;
+    }
+
+    transform.run();
+
+    const expectedData = sourceData.map(x => x * 2);
+    // By default getData reads data from current Framebuffer.
+    const outTexData = transform.getData({packed: true});
+    for (let ii=0; ii<expectedData.length; ii++) {
+      if (expectedData[ii] !== outTexData[ii]) {
+        console.log(`Didn't match at ${ii} expected: ${expectedData[ii]} actual: ${outTexData[ii]}`);
+      }
+    }
+    t.deepEqual(
+      outTexData,
+      expectedData,
+      `${name} Transform should write correct data into Texture`
+    );
+    //
+    // transform.swap();
+    // transform.run();
+    // expectedData = sourceData.map(x => x * 4);
+    //
+    // // By default getData reads data from current Framebuffer.
+    // outTexData = transform.getData({packed: true});
+    //
+    // t.deepEqual(outTexData, expectedData, `${name} Transform swap Textures`);
+    transform.delete();
+  });
+
   t.end();
 });

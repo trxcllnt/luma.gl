@@ -1,11 +1,13 @@
 import {Transform, Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/core';
 import GL from '@luma.gl/constants';
 import {
+  HISTOPYRAMID_MASK,
   HISTOPYRAMID_BUILD_VS_UTILS,
   HISTOPYRAMID_TRAVERSAL_UTILS,
   HISTOPYRAMID_BASE_BUILD_VS,
   HISTOPYRAMID_BUILD_VS,
-  HISTOPYRAMID_TRAVERSAL_VS
+  HISTOPYRAMID_TRAVERSAL_VS,
+  getHistoPyramidBuildBaseInputFunction
 } from './histopyramid-shaders';
 
 // Following methods implement Histopyramid operations as described in 'High‐speed marching cubes using histopyramids' by Dyken C, Ziegler G, Theobalt C and Seidel H
@@ -33,7 +35,7 @@ const channelToIndexMap = {
 };
 
 const _debug = {
-  enabled: true,
+  enabled: false,
   nonZeroCount: 10,
   undefinedCount: 10,
   zeroCount: 10
@@ -72,32 +74,33 @@ function _dumpTexture(title, baseTexture, textureData) {
       }
     }
   }
-
 }
+
+
 // returns a base level texture that packs given weight into a texture
 // each 2X2 region is mapped into RGBA channels of single pixel
 // returned texture is a squred power of two sized texture
 // R -> lower left, G -> lower right B -> upper left A -> upper right
 export function buildHistopyramidBaseLevel(gl, opts) {
-  const {texture, channel = 'r', _readData = false} = opts;
+  const {texture, channel = 'r', _readData = false, mask = HISTOPYRAMID_MASK.NONE} = opts;
   let {width, height} = texture;
-  if (_debug.enabled) {
-    console.log(`buildHistopyramidBaseLevel: original tex size ${width} X ${height}`);
-  }
+  // if (_debug.enabled) {
+  //   console.log(`buildHistopyramidBaseLevel: original tex size ${width} X ${height}`);
+  // }
   width = nextPowerOfTwo(width);
   height = nextPowerOfTwo(height);
-  if (_debug.enabled) {
-    console.log(`buildHistopyramidBaseLevel: Adusted to POT tex size ${width} X ${height}`);
-  }
+  // if (_debug.enabled) {
+  //   console.log(`buildHistopyramidBaseLevel: Adusted to POT tex size ${width} X ${height}`);
+  // }
   // Use sqaured next power of two size, then use half of it since we are packing 2X2 group into a single RGBA pixel
   const size = (width > height ? width : height) / 2;
   const baseTexture = cloneTextureFrom(texture, {
     width: size,
     height: size,
   });
-  if (_debug.enabled) {
-    console.log(`buildHistopyramidBaseLevel: baseTexture size ${baseTexture.width} X ${baseTexture.height}`);
-  }
+  // if (_debug.enabled) {
+  //   console.log(`buildHistopyramidBaseLevel: baseTexture size ${baseTexture.width} X ${baseTexture.height}`);
+  // }
 
   // build individual pyramid textures
   const transform = new Transform(gl, {
@@ -106,7 +109,7 @@ export function buildHistopyramidBaseLevel(gl, opts) {
     },
     _targetTexture: baseTexture,
     _targetTextureVarying: 'outTexture',
-    vs: `${HISTOPYRAMID_BUILD_VS_UTILS}${HISTOPYRAMID_BASE_BUILD_VS}`,
+    vs: `${HISTOPYRAMID_BUILD_VS_UTILS}${getHistoPyramidBuildBaseInputFunction()}${HISTOPYRAMID_BASE_BUILD_VS}`,
     elementCount: baseTexture.width * baseTexture.height
   });
   transform.run({
@@ -205,9 +208,9 @@ export function getHistoPyramid(gl, opts) {
       });
 
       flatOffset += outSize[0];
-      const _debugData = transform.getData();
-      console.log(`level: ${i} ${pyramidTextures[i].width}X${pyramidTextures[i].height}`);
-      _dumpTexture(`level: ${i}`, pyramidTextures[i], _debugData);
+      // const _debugData = transform.getData();
+      // console.log(`level: ${i} ${pyramidTextures[i].width}X${pyramidTextures[i].height}`);
+      // _dumpTexture(`level: ${i}`, pyramidTextures[i], _debugData);
       // for (let ii = 0; ii < _debugData.length; ii+=4) {
       //   if (_debugData[ii*4] !== 0 || _debugData[ii*4 + 1] !== 0 || _debugData[ii*4 +2 ] !== 0 || _debugData[ii*4 + 3] !== 0) {
       //     // console.log(`level: ${i} index: ${ii/4} : ${_debugData[ii*4]} ${_debugData[ii*4 + 1]} ${_debugData[ii*4 + 2]} ${_debugData[ii*4 + 3]}`)
@@ -260,5 +263,5 @@ export function histoPyramidGenerateIndices(gl, opts) {
     }
   });
 
-  return {locationAndIndexBuffer: locationAndIndex, baseLevelIndexBuffer: baseLevelIndex};
+  return {locationAndIndexBuffer: locationAndIndex, baseLevelIndexBuffer: baseLevelIndex, indexCount: keyIndexCount};
 }
