@@ -1,4 +1,6 @@
 {
+  "version": "0.0.0",
+  "name": "@luma.gl/examples-lessons-02",
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",
     "start-local": "webpack-dev-server --env.local --progress --hot --open -d"

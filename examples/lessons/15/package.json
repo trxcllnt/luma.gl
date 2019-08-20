@@ -1,5 +1,7 @@
 {
-  "description": "The classic WebGL Lesson 14 ported to luma.gl.",
+  "version": "0.0.0",
+  "name": "@luma.gl/examples-lessons-15",
+  "description": "The classic WebGL Lesson 15 ported to luma.gl.",
   "contributors": [
     "Xintong Xia <xintong@uber.com>"
   ],

@@ -1,4 +1,6 @@
 {
+  "version": "0.0.0",
+  "name": "@luma.gl/examples-lessons-12",
   "description": "The classic WebGL Lesson 12 ported to luma.gl.",
   "contributors": [
     "Jian Huang <jianh@uber.com>"
